@@ -309,24 +309,37 @@ let repoApprovalsChannel = "C064QCFNNBE";
         slackId,
         body
     ) => {
-        const response = await OCTOBOT.request("POST /orgs/{org}/repos", {
-            org: "hacksnowbound",
-            name: repoName,
-            description: repoDescription,
-            private: false,
-        });
+
+        const ORGANIZATION = "hacksnowbound"
+
+        // const response = await OCTOBOT.request("POST /orgs/{org}/repos", {
+        //     org: ORGANIZATION,
+        //     name: repoName,
+        //     description: repoDescription,
+        //     private: false,
+        // });
+
+        const response = await OCTOBOT.repos.createInOrg({ org, repoName, auto_init: true })
 
         const repoUrl = response["data"]["html_url"];
 
-        await OCTOBOT.request(
-            "PUT /repos/{owner}/{repo}/collaborators/{username}",
-            {
-                owner: "hacksnowbound",
-                repo: repoName,
-                username: repoOwner,
-                permission: "write",
-            }
-        );
+        // update permissions
+        await OCTOBOT.repos.addCollaborator({
+            owner: ORGANIZATION,
+            repo: repoName,
+            username: repoOwner,
+            permission: "write",
+        });
+
+        // await OCTOBOT.request(
+        //     "PUT /repos/{owner}/{repo}/collaborators/{username}",
+        //     {
+        //         owner: ORGANIZATION,
+        //         repo: repoName,
+        //         username: repoOwner,
+        //         permission: "write",
+        //     }
+        // );
 
         const conv = await slackapp.client.conversations.open({
             token: process.env.SLACK_BOT_TOKEN,
