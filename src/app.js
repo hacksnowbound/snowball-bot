@@ -310,36 +310,35 @@ let repoApprovalsChannel = "C064QCFNNBE";
         body
     ) => {
 
-        const ORGANIZATION = "hacksnowbound"
+        // " Main Website for the Snowbound Hackathon\\n"
+        // Strip leading and trailing whitespace, plus any newlines
+        repoDescription = repoDescription.trim().replace(/\n/g, "\\n");
 
-        // const response = await OCTOBOT.request("POST /orgs/{org}/repos", {
-        //     org: ORGANIZATION,
-        //     name: repoName,
-        //     description: repoDescription,
-        //     private: false,
-        // });
 
-        const response = await OCTOBOT.repos.createInOrg({ org, repoName, auto_init: true })
+        const response = await OCTOBOT.request("POST /orgs/{org}/repos", {
+            org: 'hacksnowbound',
+            name: repoName,
+            description: repoDescription,
+            private: false,
+            has_issues: true,
+            has_projects: true,
+            has_wiki: true,
+            headers: {
+                'X-GitHub-Api-Version': '2022-11-28'
+            }
+        });
 
         const repoUrl = response["data"]["html_url"];
 
-        // update permissions
-        await OCTOBOT.repos.addCollaborator({
-            owner: ORGANIZATION,
-            repo: repoName,
-            username: repoOwner,
-            permission: "write",
-        });
-
-        // await OCTOBOT.request(
-        //     "PUT /repos/{owner}/{repo}/collaborators/{username}",
-        //     {
-        //         owner: ORGANIZATION,
-        //         repo: repoName,
-        //         username: repoOwner,
-        //         permission: "write",
-        //     }
-        // );
+        await OCTOBOT.request(
+            "PUT /repos/{owner}/{repo}/collaborators/{username}",
+            {
+                owner: 'hacksnowbound',
+                repo: repoName,
+                username: repoOwner,
+                permission: "write",
+            }
+        );
 
         const conv = await slackapp.client.conversations.open({
             token: process.env.SLACK_BOT_TOKEN,
