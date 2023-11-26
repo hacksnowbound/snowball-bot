@@ -230,12 +230,17 @@ let repoApprovalsChannel = "C064QCFNNBE";
     slackapp.action("approve_repo", async ({ ack, body, client, logger }) => {
         await ack();
 
-        const repoName = body["message"]["blocks"][1]["text"]["text"].split("*")[2];
+        let repoName = body["message"]["blocks"][1]["text"]["text"].split("*")[2];
+
+        // remove any leading or trailing spaces on the repo name
+        repoName = repoName.trim();
+
         const repoDescription =
             body["message"]["blocks"][1]["text"]["text"].split("*")[4];
         const repoOwner = body["message"]["blocks"][1]["text"]["text"]
             .split("*")[6]
-            .split("/")[3];
+            .split("/")[3]
+            .replace(">", "");
         const slackId = body["message"]["blocks"][0]["text"]["text"]
             .split("<@")[1]
             .split(">")[0];
@@ -246,12 +251,19 @@ let repoApprovalsChannel = "C064QCFNNBE";
     slackapp.action("deny_repo", async ({ ack, body, client, logger }) => {
         await ack();
 
-        const repoName = body["message"]["blocks"][1]["text"]["text"].split("*")[2];
+        let repoName = body["message"]["blocks"][1]["text"]["text"].split("*")[2];
+
+        // remove any leading or trailing spaces on the repo name
+        repoName = repoName.trim();
+
         const repoDescription =
             body["message"]["blocks"][1]["text"]["text"].split("*")[4];
-        const repoOwner = body["message"]["blocks"][1]["text"]["text"]
+
+        let repoOwner = body["message"]["blocks"][1]["text"]["text"]
             .split("*")[6]
-            .split("/")[3];
+            .split("/")[3]
+            .replace(">", "");
+
         const slackId = body["message"]["blocks"][0]["text"]["text"]
             .split("<@")[1]
             .split(">")[0];
@@ -309,27 +321,24 @@ let repoApprovalsChannel = "C064QCFNNBE";
         slackId,
         body
     ) => {
-
-        // " Main Website for the Snowbound Hackathon\\n"
-        // Strip leading and trailing whitespace, plus any newlines
         repoDescription = repoDescription.trim().replace(/\n/g, "\\n");
 
+        // const response = await OCTOBOT.request("POST /repos/{template_owner}/{template_repo}/generate", {
+        //     template_owner: 'hacksnowbound',
+        //     template_repo: 'project-template',
+        //     owner: 'hacksnowbound',
+        //     name: repoName,
+        //     description: repoDescription,
+        //     private: false,
+        //     headers: {
+        //         'X-GitHub-Api-Version': '2022-11-28'
+        //     }
+        // });
 
-        const response = await OCTOBOT.request("POST /orgs/{org}/repos", {
-            org: 'hacksnowbound',
-            name: repoName,
-            description: repoDescription,
-            private: false,
-            has_issues: true,
-            has_projects: true,
-            has_wiki: true,
-            headers: {
-                'X-GitHub-Api-Version': '2022-11-28'
-            }
-        });
+        // const repoUrl = response["data"]["html_url"];
 
-        const repoUrl = response["data"]["html_url"];
-
+        // // colaborator will sometimes have something like a %e in it, which is a url encoded space, or an @ at the beginning
+        // // this will remove those
         await OCTOBOT.request(
             "PUT /repos/{owner}/{repo}/collaborators/{username}",
             {
@@ -340,6 +349,26 @@ let repoApprovalsChannel = "C064QCFNNBE";
             }
         );
 
+        // update the repo
+        // await OCTOBOT.request(
+        //     "PATCH /repos/{owner}/{repo}",
+        //     {
+        //         owner: 'hacksnowbound',
+        //         repo: repoName,
+        //         has_issues: true,
+        //         has_projects: true,
+        //         has_wiki: true,
+        //         has_downloads: true,
+        //         team_id: 8886814,
+        //         auto_init: true,
+        //         allow_squash_merge: false,
+        //         allow_merge_commit: true,
+        //         allow_rebase_merge: false,
+        //         allow_auto_merge: true,
+        //         delete_branch_on_merge: true,
+        //     }
+        // );
+
         const conv = await slackapp.client.conversations.open({
             token: process.env.SLACK_BOT_TOKEN,
             users: slackId,
@@ -347,76 +376,76 @@ let repoApprovalsChannel = "C064QCFNNBE";
 
         const channel = conv["channel"]["id"];
 
-        await slackapp.client.chat
-            .postMessage({
-                token: process.env.SLACK_BOT_TOKEN,
-                channel: channel,
-                text: `Your repo is ready! :tada: You can find it at ${repoUrl}. Happy creating!`,
-                blocks: [
-                    {
-                        type: "section",
-                        text: {
-                            type: "mrkdwn",
-                            text: `Your repo is ready! :tada: You can find it at ${repoUrl}. Happy creating!`,
-                        },
-                    },
-                    {
-                        type: "section",
-                        text: {
-                            type: "mrkdwn",
-                            text: `*Repo Name:* ${repoName}\n*Repo Description:* ${repoDescription}\n*Repo Owner:* ${repoOwner}`,
-                        },
-                    },
-                    {
-                        type: "context",
-                        elements: [
-                            {
-                                type: "mrkdwn",
-                                text: "If you need to add more people to your repo, or have any other questions, please ask in the <#C0643HAAE87|repo-creation> channel.",
-                            },
-                        ],
-                    },
-                ],
-            })
-            .then(async () => {
-                await slackapp.client.chat.update({
-                    token: process.env.SLACK_BOT_TOKEN,
-                    channel: repoApprovalsChannel,
-                    ts: body["message"]["ts"],
-                    text: "Repo Creation Request (Approved)",
-                    blocks: [
-                        {
-                            type: "section",
-                            text: {
-                                type: "mrkdwn",
-                                text: `A new repo has been requested by <@${slackId}>! :tada:`,
-                            },
-                        },
-                        {
-                            type: "section",
-                            text: {
-                                type: "mrkdwn",
-                                text: `*Repo Name:* ${repoName}\n*Repo Description:* ${repoDescription}\n*Repo Owner:*`,
-                            },
-                        },
-                        {
-                            type: "context",
-                            elements: [
-                                {
-                                    type: "mrkdwn",
-                                    text: `This repo has been _approved_ by <@${body["user"]["id"]}>.`,
-                                },
-                            ],
-                        },
-                    ],
-                });
-            });
+        // await slackapp.client.chat
+        //     .postMessage({
+        //         token: process.env.SLACK_BOT_TOKEN,
+        //         channel: channel,
+        //         text: `Your repo is ready! :tada: You can find it at ${repoUrl}. Happy creating!`,
+        //         blocks: [
+        //             {
+        //                 type: "section",
+        //                 text: {
+        //                     type: "mrkdwn",
+        //                     text: `Your repo is ready! :tada: You can find it at ${repoUrl}. Happy creating!`,
+        //                 },
+        //             },
+        //             {
+        //                 type: "section",
+        //                 text: {
+        //                     type: "mrkdwn",
+        //                     text: `*Repo Name:* ${repoName}\n*Repo Description:* ${repoDescription}\n*Repo Owner:* ${repoOwner}`,
+        //                 },
+        //             },
+        //             {
+        //                 type: "context",
+        //                 elements: [
+        //                     {
+        //                         type: "mrkdwn",
+        //                         text: "If you need to add more people to your repo, or have any other questions, please ask in the <#C0643HAAE87|repo-creation> channel.",
+        //                     },
+        //                 ],
+        //             },
+        //         ],
+        //     })
+        //     .then(async () => {
+        //         await slackapp.client.chat.update({
+        //             token: process.env.SLACK_BOT_TOKEN,
+        //             channel: repoApprovalsChannel,
+        //             ts: body["message"]["ts"],
+        //             text: "Repo Creation Request (Approved)",
+        //             blocks: [
+        //                 {
+        //                     type: "section",
+        //                     text: {
+        //                         type: "mrkdwn",
+        //                         text: `A new repo has been requested by <@${slackId}>! :tada:`,
+        //                     },
+        //                 },
+        //                 {
+        //                     type: "section",
+        //                     text: {
+        //                         type: "mrkdwn",
+        //                         text: `*Repo Name:* ${repoName}\n*Repo Description:* ${repoDescription}\n*Repo Owner:*`,
+        //                     },
+        //                 },
+        //                 {
+        //                     type: "context",
+        //                     elements: [
+        //                         {
+        //                             type: "mrkdwn",
+        //                             text: `This repo has been _approved_ by <@${body["user"]["id"]}>.`,
+        //                         },
+        //                     ],
+        //                 },
+        //             ],
+        //         });
+        //     });
 
-        await slackapp.client.chat.postMessage({
-            token: process.env.SLACK_BOT_TOKEN,
-            channel: repoCreationChannel,
-            text: `The repo${repoName}has been created by <@${slackId}>. Go check it out at ${repoUrl}! :rocket:`,
-        });
+        // await slackapp.client.chat.postMessage({
+        //     token: process.env.SLACK_BOT_TOKEN,
+        //     channel: repoCreationChannel,
+        //     text: `The repo${repoName}has been created by <@${slackId}>. Go check it out at ${repoUrl}! :rocket:`,
+        // });
     };
 
     cleanup = async (slackapp) => {
