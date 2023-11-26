@@ -444,7 +444,7 @@ let repoApprovalsChannel = "C064QCFNNBE";
         await slackapp.client.chat.postMessage({
             token: process.env.SLACK_BOT_TOKEN,
             channel: repoCreationChannel,
-            text: `The repo${repoName}has been created by <@${slackId}>. Go check it out at ${repoUrl}! :rocket:`,
+            text: `The repo ${repoName} has been created by <@${slackId}>. Go check it out at ${repoUrl}! :rocket:`,
         });
     };
 
